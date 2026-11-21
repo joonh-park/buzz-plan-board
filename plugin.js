@@ -463,18 +463,377 @@ function registerTools(agents, write) {
   });
 }
 
-const pageStyle = {
-  height: "100%",
-  minHeight: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: "var(--space-3, 12px)",
-  padding: "var(--space-panel-inset, 16px)",
-  boxSizing: "border-box",
+const BOARD_CSS = `
+.pb-root {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--space-panel-inset, 18px);
+  box-sizing: border-box;
+  color: var(--text-standard, inherit);
+}
+.pb-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-standard, rgba(127, 127, 127, 0.22));
+}
+.pb-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.pb-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-standard, inherit);
+}
+.pb-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--surface-inset, rgba(127, 127, 127, 0.12));
+  color: var(--text-subtle, inherit);
+  border: 1px solid var(--border-standard, rgba(127, 127, 127, 0.2));
+}
+.pb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-control, 8px);
+  border: 1px solid var(--border-prominent, rgba(127, 127, 127, 0.35));
+  background: var(--surface-panel, transparent);
+  color: var(--text-standard, inherit);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+.pb-btn:hover:not(:disabled) {
+  background: var(--surface-inset, rgba(127, 127, 127, 0.12));
+}
+.pb-btn:focus-visible {
+  outline: 2px solid var(--border-focus, currentColor);
+  outline-offset: 2px;
+}
+.pb-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pb-btn-primary {
+  background: var(--affordance-prominent, var(--surface-inverse, #1f2937));
+  color: var(--text-on-prominent, var(--text-inverse, #ffffff));
+  border-color: transparent;
+}
+.pb-btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+  background: var(--affordance-prominent, var(--surface-inverse, #1f2937));
+}
+.pb-form-panel {
+  background: var(--surface-panel, transparent);
+  border: 1px solid var(--border-prominent, rgba(127, 127, 127, 0.35));
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 58rem;
+}
+.pb-form-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-standard, rgba(127, 127, 127, 0.2));
+}
+.pb-form-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-standard, inherit);
+}
+.pb-form-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-metadata, var(--text-subtle, inherit));
+}
+.pb-form-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+.pb-span-6 { grid-column: span 6; }
+.pb-span-3 { grid-column: span 3; }
+.pb-span-2 { grid-column: span 2; }
+@media (max-width: 720px) {
+  .pb-span-3, .pb-span-2 { grid-column: span 6; }
+}
+.pb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.pb-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-standard, inherit);
+  line-height: 1.3;
+}
+.pb-input,
+.pb-select {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 11px;
+  box-sizing: border-box;
+  border-radius: var(--radius-control, 8px);
+  border: 1px solid var(--border-prominent, rgba(127, 127, 127, 0.38));
+  background: var(--surface-inset, rgba(127, 127, 127, 0.08));
+  color: var(--text-standard, inherit);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+.pb-input-mono {
+  font-family: var(--font-system-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.8125rem;
+}
+.pb-input::placeholder {
+  color: var(--text-metadata, rgba(127, 127, 127, 0.75));
+}
+.pb-input:focus,
+.pb-select:focus {
+  outline: none;
+  border-color: var(--border-focus, currentColor);
+  background: var(--surface-panel, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-focus, currentColor) 18%, transparent);
+}
+.pb-input:disabled,
+.pb-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pb-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-standard, rgba(127, 127, 127, 0.2));
+}
+.pb-alert {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-danger, rgba(220, 38, 38, 0.45));
+  background: color-mix(in srgb, var(--border-danger, #dc2626) 10%, transparent);
+  color: var(--text-danger, inherit);
+  font-size: 0.875rem;
+}
+.pb-status-note {
+  font-size: 0.8125rem;
+  color: var(--text-metadata, inherit);
+}
+.pb-columns {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-height: 0;
+  flex: 1;
+  padding-bottom: 4px;
+}
+.pb-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 0 15.5rem;
+  min-width: 15.5rem;
+  min-height: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-inset, rgba(127, 127, 127, 0.06));
+  border: 1px solid var(--border-standard, rgba(127, 127, 127, 0.18));
+  box-sizing: border-box;
+}
+.pb-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 6px;
+  border-bottom: 1px solid var(--border-standard, rgba(127, 127, 127, 0.16));
+}
+.pb-col-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.pb-col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.pb-col-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-standard, inherit);
+}
+.pb-col-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.pb-col-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-right: 2px;
+}
+.pb-empty {
+  padding: 18px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-standard, rgba(127, 127, 127, 0.25));
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-metadata, inherit);
+}
+.pb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface-panel, transparent);
+  border: 1px solid var(--border-standard, rgba(127, 127, 127, 0.22));
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.05));
+  overflow-wrap: anywhere;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.pb-card:hover {
+  border-color: var(--border-prominent, rgba(127, 127, 127, 0.42));
+}
+.pb-card-blocked {
+  border-left: 3px solid var(--border-danger, #dc2626);
+}
+.pb-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.38;
+  color: var(--text-standard, inherit);
+}
+.pb-card-title p {
+  margin: 0;
+}
+.pb-card-title a {
+  color: var(--text-standard, inherit);
+  text-decoration: none;
+}
+.pb-card-title a:hover {
+  text-decoration: underline;
+}
+.pb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pb-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--surface-inset, rgba(127, 127, 127, 0.12));
+  color: var(--text-subtle, inherit);
+}
+.pb-done-when {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-subtle, inherit);
+}
+.pb-blocker {
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  background: var(--surface-categorical-amber, rgba(245, 158, 11, 0.14));
+  color: var(--text-categorical-amber, var(--text-danger, inherit));
+}
+.pb-card-footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-standard, rgba(127, 127, 127, 0.16));
+}
+.pb-card-select {
+  height: 30px;
+  font-size: 0.8125rem;
+  padding: 0 8px;
+}
+`;
+
+const STATE_TONES = {
+  backlog: {
+    dot: "var(--text-metadata, #6b7280)",
+    bg: "var(--surface-panel, rgba(127, 127, 127, 0.14))",
+    fg: "var(--text-subtle, inherit)",
+  },
+  doing: {
+    dot: "var(--text-categorical-blue, #2563eb)",
+    bg: "var(--surface-categorical-blue, rgba(37, 99, 235, 0.14))",
+    fg: "var(--text-categorical-blue, inherit)",
+  },
+  review: {
+    dot: "var(--text-categorical-purple, #7c3aed)",
+    bg: "var(--surface-categorical-purple, rgba(124, 58, 237, 0.14))",
+    fg: "var(--text-categorical-purple, inherit)",
+  },
+  blocked: {
+    dot: "var(--border-danger, #dc2626)",
+    bg: "var(--surface-categorical-amber, rgba(245, 158, 11, 0.16))",
+    fg: "var(--text-categorical-amber, inherit)",
+  },
+  done: {
+    dot: "var(--text-success, #16a34a)",
+    bg: "var(--surface-categorical-green, rgba(22, 163, 74, 0.14))",
+    fg: "var(--text-categorical-green, inherit)",
+  },
 };
-const rowStyle = { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--space-2, 8px)" };
-const stackStyle = { display: "grid", alignContent: "start", gap: "var(--space-2, 8px)" };
-const cardStyle = { ...stackStyle, padding: "var(--space-3, 12px)", overflowWrap: "anywhere" };
 
 function canvasForPage(relay, session, channel) {
   const check = () => {
@@ -522,73 +881,125 @@ function createPage(ctx, write, watch) {
   function BoardCard({ card, session, disabled, move }) {
     const { id, title, values } = card;
     const url = threadLink(values.thread);
+    const status = cardStatus(values);
     return h(
       "article",
-      { className: "ui-card", style: cardStyle },
-      url
-        ? h(Markdown, {
-            session,
-            content: `[${title.replace(/[\\\[\]`*_<>!]/g, (char) => `\\${char}`)}](<${url}>)`,
-          })
-        : h("strong", null, title),
+      { className: `ui-card pb-card${status === "blocked" ? " pb-card-blocked" : ""}` },
       h(
-        "small",
-        { style: { color: "var(--text-metadata)" } },
-        [values.owner, values.project].filter(Boolean).join(" · "),
+        "div",
+        { className: "pb-card-title" },
+        url
+          ? h(Markdown, {
+              session,
+              content: `[${title.replace(/[\\\[\]`*_<>!]/g, (char) => `\\${char}`)}](<${url}>)`,
+            })
+          : h("strong", null, title),
       ),
-      values["done-when"] && h("div", null, values["done-when"]),
-      values.blocker && h("div", null, `막힘 · ${values.blocker}`),
+      (values.owner || values.project) &&
+        h(
+          "div",
+          { className: "pb-chips" },
+          values.owner && h("span", { className: "pb-chip" }, values.owner),
+          values.project && h("span", { className: "pb-chip" }, values.project),
+        ),
+      values["done-when"] && h("div", { className: "pb-done-when" }, values["done-when"]),
+      values.blocker && h("div", { className: "pb-blocker" }, `막힘 · ${values.blocker}`),
       h(
-        "select",
-        {
-          "aria-label": `${title} 상태`,
-          disabled,
-          value: cardStatus(values),
-          onChange: (event) => move(id, event.target.value),
-        },
-        choices,
+        "div",
+        { className: "pb-card-footer" },
+        h(
+          "select",
+          {
+            className: "pb-select pb-card-select",
+            "aria-label": `${title} 상태`,
+            disabled,
+            value: status,
+            onChange: (event) => move(id, event.target.value),
+          },
+          choices,
+        ),
       ),
     );
   }
 
   function AddCard({ add, pending, close }) {
-    const fields = [
-      ["title", "제목", 240],
-      ["owner", "담당", 100],
-      ["project", "프로젝트", 100],
-      ["thread", "Buzz 스레드 링크", 500],
-      ["done_when", "완료 조건", 500],
-      ["blocker", "막힌 이유 (선택)", 500],
-    ];
+    const field = (name, label, { maxLength, placeholder, required = true, span = "pb-span-6", mono = false }) => {
+      const id = `pb-add-${name}`;
+      return h(
+        "div",
+        { key: name, className: `pb-field ${span}` },
+        h("label", { htmlFor: id, className: "pb-label" }, label),
+        h("input", {
+          id,
+          name,
+          className: `pb-input${mono ? " pb-input-mono" : ""}`,
+          maxLength,
+          placeholder,
+          required,
+          disabled: pending,
+        }),
+      );
+    };
     return h(
       "form",
       {
-        className: "ui-card",
-        style: { ...cardStyle, gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))" },
+        className: "ui-card pb-form-panel",
         onSubmit: (event) => {
           event.preventDefault();
           add(Object.fromEntries(new FormData(event.currentTarget)));
         },
       },
-      fields.map(([name, label, maxLength]) =>
-        h(
-          "label",
-          { key: name, style: stackStyle },
-          label,
-          h("input", { name, maxLength, required: name !== "blocker", disabled: pending }),
-        ),
-      ),
       h(
-        "label",
-        { style: stackStyle },
-        "상태",
-        h("select", { name: "status", defaultValue: "backlog", disabled: pending }, choices),
+        "div",
+        { className: "pb-form-head" },
+        h("h2", { className: "pb-form-title" }, "새 카드 추가"),
+        h("p", { className: "pb-form-sub" }, "각 항목 아래 입력 칸에 내용을 적은 뒤 카드 저장을 눌러 주세요."),
       ),
       h(
         "div",
-        { style: { ...rowStyle, alignSelf: "end" } },
-        h("button", { type: "submit", disabled: pending }, "카드 저장"),
-        h("button", { type: "button", disabled: pending, onClick: close }, "취소"),
+        { className: "pb-form-grid" },
+        field("title", "제목", { maxLength: 240, placeholder: "예: 계획 보드 UI 개선", span: "pb-span-6" }),
+        field("owner", "담당", { maxLength: 100, placeholder: "예: Neon", span: "pb-span-2" }),
+        field("project", "프로젝트", { maxLength: 100, placeholder: "예: buzz", span: "pb-span-2" }),
+        h(
+          "div",
+          { className: "pb-field pb-span-2" },
+          h("label", { htmlFor: "pb-add-status", className: "pb-label" }, "상태"),
+          h(
+            "select",
+            {
+              id: "pb-add-status",
+              name: "status",
+              className: "pb-select",
+              defaultValue: "backlog",
+              disabled: pending,
+            },
+            choices,
+          ),
+        ),
+        field("thread", "Buzz 스레드 링크", {
+          maxLength: 500,
+          placeholder: "buzz://message?channel=...&id=...",
+          span: "pb-span-6",
+          mono: true,
+        }),
+        field("done_when", "완료 조건", {
+          maxLength: 500,
+          placeholder: "예: 데스크톱 화면 확인 및 테스트 통과",
+          span: "pb-span-3",
+        }),
+        field("blocker", "막힌 이유 (선택)", {
+          maxLength: 500,
+          placeholder: "막힘 상태일 때만 입력",
+          required: false,
+          span: "pb-span-3",
+        }),
+      ),
+      h(
+        "div",
+        { className: "pb-form-footer" },
+        h("button", { type: "button", className: "pb-btn", disabled: pending, onClick: close }, "취소"),
+        h("button", { type: "submit", className: "pb-btn pb-btn-primary", disabled: pending }, "카드 저장"),
       ),
     );
   }
@@ -605,13 +1016,19 @@ function createPage(ctx, write, watch) {
     if (list.status === "error") {
       return h(
         "div",
-        { style: pageStyle },
-        h("p", { role: "alert" }, "채널 목록을 읽지 못했습니다."),
-        h("div", null, h("button", { onClick: () => channels.refreshList?.() }, "다시 시도")),
+        { className: "pb-root" },
+        h("style", null, BOARD_CSS),
+        h("p", { role: "alert", className: "pb-alert" }, "채널 목록을 읽지 못했습니다."),
+        h("div", null, h("button", { className: "pb-btn", onClick: () => channels.refreshList?.() }, "다시 시도")),
       );
     }
     if (list.status !== "ready")
-      return h("p", { role: "status", style: pageStyle }, "채널을 불러오는 중…");
+      return h(
+        "div",
+        { className: "pb-root" },
+        h("style", null, BOARD_CSS),
+        h("p", { role: "status", className: "pb-status-note" }, "채널을 불러오는 중…"),
+      );
     let joined;
     try {
       joined = findBoard(
@@ -623,7 +1040,12 @@ function createPage(ctx, write, watch) {
           })),
       );
     } catch (error) {
-      return h("p", { role: "status", style: pageStyle }, text(error));
+      return h(
+        "div",
+        { className: "pb-root" },
+        h("style", null, BOARD_CSS),
+        h("p", { role: "status", className: "pb-status-note" }, text(error)),
+      );
     }
     return h(CanvasBoard, { key: joined.id, session, channel: joined.id, readOnly: !!joined.readOnly });
   }
@@ -675,19 +1097,47 @@ function createPage(ctx, write, watch) {
 
     const disabled =
       operation.pending || state.loading || readOnly || !!state.error || !session.canvas.available;
+    const activeCount = state.cards.filter(({ values }) => cardStatus(values) !== "done").length;
     return h(
       "section",
-      { "aria-label": "계획 보드", style: pageStyle },
+      { "aria-label": "계획 보드", className: "pb-root" },
+      h("style", null, BOARD_CSS),
       h(
         "header",
-        { style: rowStyle },
-        h("button", { disabled: state.loading || operation.pending, onClick: refresh }, "새로고침"),
+        { className: "pb-header" },
         h(
-          "button",
-          { disabled, "aria-expanded": adding, onClick: () => setAdding(!adding) },
-          "카드 추가",
+          "div",
+          { className: "pb-title-group" },
+          h("h1", { className: "pb-title" }, "계획 보드"),
+          h("span", { className: "pb-badge" }, "#plans"),
+          !state.loading &&
+            !state.error &&
+            h("span", { className: "pb-badge" }, `진행 ${activeCount} · 전체 ${state.cards.length}`),
+          (readOnly || !session.canvas.available) && h("span", { className: "pb-badge" }, "읽기 전용"),
         ),
-        (readOnly || !session.canvas.available) && h("span", null, "읽기 전용"),
+        h(
+          "div",
+          { className: "pb-actions" },
+          h(
+            "button",
+            {
+              className: "pb-btn",
+              disabled: state.loading || operation.pending,
+              onClick: refresh,
+            },
+            "새로고침",
+          ),
+          h(
+            "button",
+            {
+              className: `pb-btn${adding ? "" : " pb-btn-primary"}`,
+              disabled,
+              "aria-expanded": adding,
+              onClick: () => setAdding(!adding),
+            },
+            "카드 추가",
+          ),
+        ),
       ),
       adding &&
         h(AddCard, {
@@ -695,42 +1145,49 @@ function createPage(ctx, write, watch) {
           close: () => setAdding(false),
           add: (args) => submit(upsertInput, args, () => setAdding(false)),
         }),
-      state.loading && h("span", { role: "status" }, "보드를 불러오는 중…"),
-      (state.error || operation.error) && h("p", { role: "alert" }, operation.error || state.error),
+      state.loading && h("span", { role: "status", className: "pb-status-note" }, "보드를 불러오는 중…"),
+      (state.error || operation.error) &&
+        h("p", { role: "alert", className: "pb-alert" }, operation.error || state.error),
       !state.error &&
         (!state.loading || state.cards.length > 0) &&
         h(
           "div",
-          {
-            style: {
-              display: "flex",
-              gap: "var(--space-3, 12px)",
-              overflow: "auto",
-              minHeight: 0,
-              flex: 1,
-            },
-          },
+          { className: "pb-columns" },
           Object.entries(STATES).map(([status, label]) => {
             const group = state.cards.filter(({ values }) => cardStatus(values) === status);
+            const tone = STATE_TONES[status];
             return h(
               "section",
-              {
-                key: status,
-                "aria-label": label,
-                style: { ...stackStyle, flex: "1 0 13rem", minWidth: 0 },
-              },
-              h("h2", { style: { fontSize: "var(--text-body-size, 1rem)", margin: 0 } }, label),
-              group.map((card) =>
-                h(BoardCard, {
-                  key: card.id,
-                  card,
-                  session,
-                  disabled,
-                  move: (id, status) => submit(moveInput, { id, status }),
-                }),
+              { key: status, "aria-label": label, className: "pb-column" },
+              h(
+                "div",
+                { className: "pb-col-head" },
+                h(
+                  "div",
+                  { className: "pb-col-title-wrap" },
+                  h("span", { className: "pb-col-dot", style: { background: tone.dot } }),
+                  h("h2", { className: "pb-col-title" }, label),
+                ),
+                h(
+                  "span",
+                  { className: "pb-col-count", style: { background: tone.bg, color: tone.fg } },
+                  String(group.length),
+                ),
               ),
-              group.length === 0 &&
-                h("small", { style: { color: "var(--text-metadata)" } }, "카드 없음"),
+              h(
+                "div",
+                { className: "pb-col-list" },
+                group.map((card) =>
+                  h(BoardCard, {
+                    key: card.id,
+                    card,
+                    session,
+                    disabled,
+                    move: (id, status) => submit(moveInput, { id, status }),
+                  }),
+                ),
+                group.length === 0 && h("div", { className: "pb-empty" }, "카드 없음"),
+              ),
             );
           }),
         ),
@@ -740,7 +1197,12 @@ function createPage(ctx, write, watch) {
   return function PlanBoard() {
     const snapshot = React.useSyncExternalStore(subscribeRelay, relaySnapshot);
     if (snapshot.status !== "ready")
-      return h("p", { role: "status", style: pageStyle }, "커뮤니티 연결 후 보드를 열 수 있습니다.");
+      return h(
+        "div",
+        { className: "pb-root" },
+        h("style", null, BOARD_CSS),
+        h("p", { role: "status", className: "pb-status-note" }, "커뮤니티 연결 후 보드를 열 수 있습니다."),
+      );
     return h(ConnectedBoard, { key: snapshot.generation, session: snapshot.session });
   };
 }
